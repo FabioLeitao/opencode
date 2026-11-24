@@ -1,6 +1,6 @@
 # Plano: modelo real do roteador no opencode
 
-Atualizado em 2026-11-23. Status: **rascunho, aguardando aprovação do cliente** (nada publicado como issue ainda).
+Atualizado em 2026-11-23. Status: **aprovado pelo cliente em 2026-11-23** ("pro mim, ok no plano"); tarefas publicadas como issues no fork.
 Cliente e product owner: o operador. Fonte dos requisitos: `docs/description.md`.
 
 ## Resumo
@@ -96,6 +96,16 @@ testes de aceitação como commits do branch, pendentes, e o dev os liga um a um
 - **M1.4** *(backend)* `opencode session export`: incluir o campo quando presente. Atende R5. *(depende de P4)*
 - **M1.5** *(qa)* Validação ponta a ponta contra o FreeLLMAPI `:3001` com `auto` (banco, TUI e export), e checagem final
   do gate no SHA exato do épico. Atende R11. A janela de uso do `:3001` se combina com o `fla-pm`. *(depende de P9)*
+
+- **M1.6** *(backend, arquiteto)* Desenho técnico do épico, publicado na issue desta tarefa antes de qualquer código:
+  caminho de captura que o `freellmapi` usa de fato, nome e lugar do campo em `packages/schema`, flag e chave
+  `experimental`, onde o TUI e o export leem o campo, e conferência contra as oito promessas da `#60309`. Atende R9,
+  R10, R12. *(tarefa acrescentada na aprovação, em 2026-11-23; o ID segue o próximo livre, mas o desenho vem primeiro)*
+- **M1.7** *(qa)* Testes de aceitação de caixa-preta do épico (T1.1 a T1.13), escritos a partir do desenho e entregues
+  como commits do branch `resolved-model`, pendentes, antes da implementação. Atende R1 a R9, R15. *(acrescentada na
+  aprovação, em 2026-11-23)*
+
+Ordem do épico: M1.6 (desenho) → M1.7 (testes) → liberação → M1.1, M1.2, M1.3 e M1.4 (dev) → M1.5 (validação).
 
 Tarefa mista: M1.1 a M1.4 compartilham o branch. Não se dividem em PRs separados.
 

@@ -92,4 +92,7 @@ Dito com honestidade lá: a PR do zero (#1234) ainda não foi mesclada, e o mant
 
 ## Aprovação do plano
 
-(pendente: o plano ainda não foi aprovado pelo cliente)
+**Aprovado em 2026-11-23** pelo cliente (o operador, Fabio Leitao), no chat, com as palavras "pro mim, ok no plano", sobre
+o PDF `docs/visao-projeto-2026-11-23.pdf` ("Plano do projeto para aprovação") e o `docs/plano.md`. Ficam valendo as
+suposições P4, P5, P6, P7 e P9 do plano. O branch `local` (P9) continua dependendo de um "ok" específico do operador,
+antes de a PR do épico abrir; por ora não foi criado.
