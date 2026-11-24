@@ -1,0 +1,1 @@
+- [Acceptance harness (opencode fork)](acceptance_harness_opencode.md) — test.failing pending, in-process server + fake router, core hang, event subscribe gotcha
