@@ -19,6 +19,13 @@ Dev externo: opencode (TUI no herdr, nunca headless, modelo Auto do FreeLLMAPI p
 - Referência ao upstream em issue, PR ou commit do fork vai entre crases, sem link, no formato `anomalyco/opencode#60309`: um link gera evento na timeline deles.
 - O CONTRIBUTING deles exige revisão de desenho antes de mudança de núcleo. O comentário de desenho já foi postado pelo Owl na `#60309`. O PR upstream só sai depois de resposta do mantenedor e com o "vai".
 
+## Brief de dev externo (regras do operador via Owl, 2026-11-23; valem as skills `operar-*` em `~/.agents/skills`)
+
+- **Linha obrigatória em todo brief de dev externo neste fork:** "Do not open, comment on, react to or close anything in anomalyco/opencode (the upstream). Issues and PRs go only to the fork." Nenhum agente nem dev externo mexe no upstream; ao upstream só vai o que foi validado localmente, com o "vai" do operador, uma PR por vez, seguindo o CONTRIBUTING de lá.
+- **Modelo por harness.** Passam pelo FreeLLMAPI e começam SEMPRE no Auto: opencode, goose, pi, cline, zero e hermes. Não passam por ele e usam conta e modelo próprios: agy (Google/Gemini fixo), codex (OpenAI), cursor (assinatura, eventual), grok (xAI) e dsh (nunca chave real).
+- O evento da tarefa registra qual conta e qual modelo escreveram o patch. No zero, o model real aparece em `zero usage report` (`auto -> <modelo>`).
+- Antes de montar o brief, chamar a skill `operar-dev-externo` e a do harness escolhido (o texto antigo, se carregado, vale menos que o atual).
+
 ## Gate local (este repo não tem builder)
 
 - `bun install` na raiz, e `bun typecheck` e `bun run test` dentro de cada pacote tocado (os testes não rodam na raiz).
