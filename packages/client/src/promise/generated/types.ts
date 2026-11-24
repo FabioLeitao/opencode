@@ -1519,6 +1519,7 @@ export type SessionStepEnded = {
     assistantMessageID: SessionMessageID
     finish: "stop" | "length" | "tool-calls" | "content-filter" | "error" | "unknown"
     rawFinish?: string
+    resolvedModel?: string
     native?: SessionMessageNative1
     cost: MoneyUSD
     tokens: TokenUsageInfo
@@ -2676,6 +2677,7 @@ export type ConfigEntry =
           project_overlay?: boolean
           opencode_api?: boolean
           sqlite_fts?: boolean
+          resolved_model?: boolean
           video_generate?: boolean | { model?: string | { providerID: string; model: string; variant?: string } }
           part_rows?: boolean
           image_generate?: boolean | { model?: string | { providerID: string; model: string; variant?: string } }
@@ -2834,6 +2836,7 @@ export type SessionMessageAssistant = {
   snapshot?: { start?: SnapshotID; end?: SnapshotID; files?: Array<RelativePath> }
   finish?: "stop" | "length" | "tool-calls" | "content-filter" | "error" | "unknown"
   rawFinish?: string
+  resolvedModel?: string
   native?: SessionMessageNative
   cost?: MoneyUSD
   tokens?: TokenUsageInfo

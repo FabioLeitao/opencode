@@ -376,6 +376,8 @@ export namespace Step {
       assistantMessageID: SessionMessage.ID,
       finish: FinishReason,
       rawFinish: Schema.String.pipe(optional),
+      // Model the provider reported serving this step, sanitized; absent when it equals the requested model.
+      resolvedModel: Schema.String.pipe(optional),
       native: SessionMessage.Native.pipe(optional),
       cost: Money.USD,
       tokens: TokenUsage.Info,

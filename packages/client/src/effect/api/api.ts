@@ -1023,6 +1023,7 @@ export type ExperimentalSessionLogOutput =
             readonly assistantMessageID: SessionMessage.ID
             readonly finish: "stop" | "length" | "tool-calls" | "content-filter" | "error" | "unknown"
             readonly rawFinish?: string | undefined
+            readonly resolvedModel?: string | undefined
             readonly native?: SessionMessage.Native | undefined
             readonly cost: Money.USD
             readonly tokens: {

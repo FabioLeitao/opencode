@@ -26,6 +26,7 @@ export const registry = {
     'Let Code Mode scripts call the OpenCode HTTP API with fetch("opencode:///api/..."), in-process and already signed in, with no permission checks. Only in local and dev builds, and off there until you opt in with OPENCODE_FLAGS=opencode_api or experimental.opencode_api: true.',
   sqlite_fts:
     "Build an SQLite full-text index of session titles and message text in the background, and enable the opencode.session.search and opencode.session.read tools. The index covers every session in the database and starts while any loaded location enables it; SQLite keeps it current from then on, also after this is turned off.",
+  resolved_model: "Record the model a routing provider reports it served (such as freellmapi/auto or openrouter/auto) on each assistant step, and show it next to the requested model when they differ.",
 } as const satisfies Record<string, string>
 export type Key = keyof typeof registry
 

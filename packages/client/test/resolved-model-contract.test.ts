@@ -5,10 +5,6 @@ import { describe, expect, test } from "bun:test"
 
 // Acceptance tests (QA, black box) for AM1.6-15 (T1.13) of the epic "resolved model" (design M1.6): the generated client
 // is the public contract, so these read the generated files and run the generator, nothing of the implementation.
-// The test marked `pending` is the acceptance of task M1.1 (#6) and uses `test.failing`: the run breaks when it starts to
-// pass, so whoever implements the task has to remove the mark.
-
-const pending = test.failing
 const root = path.join(import.meta.dir, "..")
 const generated = ["src/promise/generated", "src/effect/generated"].map((directory) => path.join(root, directory))
 
@@ -31,7 +27,7 @@ const fingerprint = async () => {
 }
 
 describe("generated client contract (AM1.6-15)", () => {
-  pending(
+  test(
     "AM1.6-15: the generated client has resolvedModel on the step event and on the assistant message, and the flag in the config",
     async () => {
       const types = await Bun.file(path.join(root, "src/promise/generated/types.ts")).text()

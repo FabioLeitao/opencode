@@ -234,6 +234,7 @@ export const Assistant = Schema.Struct({
   }).pipe(optional),
   finish: FinishReason.pipe(optional),
   rawFinish: Schema.String.pipe(optional),
+  resolvedModel: Schema.String.pipe(optional),
   /** Step-level native data, such as a provider's reason for blocking a response. */
   native: Native.pipe(optional),
   cost: Money.USD.pipe(optional),
