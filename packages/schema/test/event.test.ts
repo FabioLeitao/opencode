@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { Schema } from "effect"
 import { Event } from "../src/event.js"
 import { EventLog } from "../src/event-log.js"
+import { SessionEvent } from "../src/session-event.js"
 
 describe("public event schemas", () => {
   test("definition is pure", () => {
@@ -48,5 +49,28 @@ describe("public event schemas", () => {
       type: "log.synced",
       aggregateID: "ses_test",
     })
+  })
+})
+
+describe("session.step.ended resolvedModel (DM1.6-2)", () => {
+  const base = {
+    sessionID: "ses_test",
+    assistantMessageID: "msg_test",
+    finish: "stop",
+    cost: 0,
+    tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+  }
+  const decode = Schema.decodeUnknownSync(SessionEvent.Step.Ended.data)
+
+  test("keeps resolvedModel when present", () => {
+    expect(decode({ ...base, resolvedModel: "vendor/real-x" }).resolvedModel).toBe("vendor/real-x")
+  })
+
+  test("decodes without resolvedModel", () => {
+    expect(decode(base)).not.toHaveProperty("resolvedModel")
+  })
+
+  test("drops an unknown key", () => {
+    expect(decode({ ...base, unknownKey: "x" })).not.toHaveProperty("unknownKey")
   })
 })
