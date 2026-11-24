@@ -229,6 +229,7 @@ export function update(adapter: Adapter, event: SessionEvent.DurableEvent) {
                 draft.error = undefined
                 draft.finish = undefined
                 draft.rawFinish = undefined
+                draft.resolvedModel = undefined
                 draft.native = undefined
                 draft.time.created = DateTime.makeUnsafe(event.data.started)
                 draft.time.firstToken = undefined
@@ -276,6 +277,7 @@ export function update(adapter: Adapter, event: SessionEvent.DurableEvent) {
           draft.time.completed = created
           draft.finish = event.data.finish
           draft.rawFinish = event.data.rawFinish
+          draft.resolvedModel = event.data.resolvedModel
           draft.native = castDraft(event.data.native)
           draft.cost = event.data.cost
           draft.tokens = event.data.tokens

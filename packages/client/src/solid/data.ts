@@ -1085,6 +1085,7 @@ export function createData(config: CreateDataInput) {
             existing.error = undefined
             existing.finish = undefined
             existing.rawFinish = undefined
+            existing.resolvedModel = undefined
             existing.native = undefined
             existing.time.created = event.data.started
             existing.time.firstToken = undefined
@@ -1125,6 +1126,7 @@ export function createData(config: CreateDataInput) {
           assistant.time.completed = event.created
           assistant.finish = event.data.finish
           assistant.rawFinish = event.data.rawFinish
+          assistant.resolvedModel = event.data.resolvedModel
           assistant.native = event.data.native
           assistant.cost = event.data.cost
           assistant.tokens = event.data.tokens
