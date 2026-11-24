@@ -1,0 +1,1 @@
+- [Pontos frágeis do opencode v2](project_pontos_frageis.md): rota nativa vs aisdk.ts, dobra duplicada no client, flag em release, pre-push com bun
