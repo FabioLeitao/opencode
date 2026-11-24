@@ -95,7 +95,7 @@ testes de aceitação como commits do branch, pendentes, e o dev os liga um a um
   semânticos e testes de renderização em largura estreita e larga. Atende R4. *(depende de P4)*
 - **M1.4** *(backend)* `opencode session export`: incluir o campo quando presente. Atende R5. *(depende de P4)*
 - **M1.5** *(qa)* Validação ponta a ponta contra o FreeLLMAPI `:3001` com `auto` (banco, TUI e export), e checagem final
-  do gate no SHA exato do épico. Atende R11. *(depende de P8, P9)*
+  do gate no SHA exato do épico. Atende R11. A janela de uso do `:3001` se combina com o `fla-pm`. *(depende de P9)*
 
 Tarefa mista: M1.1 a M1.4 compartilham o branch. Não se dividem em PRs separados.
 
@@ -103,7 +103,7 @@ Tarefa mista: M1.1 a M1.4 compartilham o branch. Não se dividem em PRs separado
 
 - **M2.1** *(qa)* Verificar se `modalities: {input:["text"]}` no `freellmapi/auto` do `opencode.json` faz o opencode não
   mandar a imagem (servidor local de eco que registra o corpo da requisição), e ler a `#54784` (só leitura) para
-  relacionar. Relatório numa issue do fork, sem PR. Atende R17. *(depende de P6, P8)*
+  relacionar. Relatório numa issue do fork, sem PR. Atende R17. *(depende de P6)*
 - **M2.2** *(backend, condicional)* Só nasce se M2.1 mostrar que a configuração não basta: desenho de correção no
   opencode. Não é publicada antes de M2.1 concluir, e só com autorização do operador. *(depende de P6)*
 
@@ -136,8 +136,11 @@ Tarefa mista: M1.1 a M1.4 compartilham o branch. Não se dividem em PRs separado
 - **T1.12** reconstruir o agregado da sessão a partir dos eventos duráveis reproduz o campo. Cobre R1, R10.
 - **T1.13** contrato: `bun run generate` em `packages/client` não deixa diferença no git depois do épico, e os testes de
   schema e de identificadores passam. Cobre R9, R10.
-- **T1.14** ponta a ponta manual contra o FreeLLMAPI `:3001` com `auto`: o banco guarda `auto` como pedido e o model real
-  como campo próprio; o TUI e o export mostram a diferença. Cobre R11. *(depende de P8)*
+- **T1.14** ponta a ponta manual contra o FreeLLMAPI `:3001` com `auto`, usado só como cliente normal (é o roteador de
+  produção: sem reiniciar, sem trocar imagem, sem tocar config). O banco do opencode guarda `auto` como pedido e o model
+  real como campo próprio; o TUI e o export mostram a diferença. A conferência independente do patch é no `freeapi.db`,
+  somente leitura: `requests.platform` e `requests.model_id` (o `served_model` vem vazio). O teste não fixa um nome de
+  model, porque o model real muda quando o `fla-pm` trocar a imagem. Cobre R11.
 
 ### M2
 
@@ -158,6 +161,14 @@ Tarefa mista: M1.1 a M1.4 compartilham o branch. Não se dividem em PRs separado
   `cursor` talvez, se a franquia semanal de tokens já tiver sido renovada; `agy` é um bom harness "acho" (fica como
   candidato). Operador, no chat, 2026-11-23. Itens revisados: `docs/operacao.md` (`Dev externo:`), M1.1 a M1.4.
 
+- **P8** O FreeLLMAPI `:3001` fica no ar durante M1.5 e M2.1? **Resposta (fato medido pelo Owl, 2026-11-23, que diz que a
+  decisão final é do operador):** está no ar (container `freellmapi_freellmapi_1`, healthy, 43 h), e é o roteador de
+  PRODUÇÃO de todos os harnesses. Uso permitido: só como cliente normal, sem reiniciar, sem trocar imagem, sem tocar
+  config. O `fla-pm` vai trocar a imagem quando os consertos #3, #4 e #5 do fork dele forem validados; a janela da
+  validação se combina com ele, e o model real que aparecer pode mudar depois disso. Itens revisados: R11, M1.5, M2.1,
+  T1.14 (sem model fixo no teste; conferência no `freeapi.db` somente leitura). O M2.1 não precisa do `:3001`: usa um
+  servidor de eco local.
+
 ### Em aberto
 
 - **P4** *(prioritária)* O campo aparece só no TUI e no `session export`, ou também nos apps desktop e web
@@ -170,8 +181,11 @@ Tarefa mista: M1.1 a M1.4 compartilham o branch. Não se dividem em PRs separado
 - **P7** Qual CI vale no fork? O Actions está habilitado e os workflows do upstream rodam nos PRs. **Suposição:** vale o
   que rodar; se falhar por segredo ou infra do runner, registro como indisponível e vale o gate local. Dependem: F0.3,
   ritual de fechamento.
-- **P8** O FreeLLMAPI `:3001` fica no ar, com `auto` respondendo texto, durante M1.5 e M2.1? **Suposição:** sim. Dependem:
-  R11, M1.5, M2.1, T1.14.
-- **P9** Qual o destino do merge do PR do épico no fork? O Owl citou `merge-green`, mas o épico não deve mesclar na `dev`
-  do fork, que espelha o upstream. **Suposição:** o PR do fork fica aberto como veículo de revisão e de CI; quem vai ao
-  upstream é o próprio branch do épico. Dependem: M1.5, U1.1, ritual de fechamento.
+- **P9** Qual o destino do merge da PR do épico no fork? O Owl explicou que o `merge-green` não tem destino especial:
+  ele mescla a PR na base que ela já tem (merge-commit, confere CLEAN e head, nunca squash, rebase ou `--auto`), e só
+  chama o `gl-mirror` para repos do mapa (o opencode não está nele). Sugestão do Owl, que é como o zero funciona: NÃO
+  mesclar na `dev` do fork (ela fica espelho do `upstream/dev`, para o `gh repo sync` continuar limpo); a PR do épico mira
+  um branch de integração local do fork, por exemplo `local`, de onde sai o binário de dogfooding, e é mesclada lá com
+  `merge-green FabioLeitao/opencode#<n>`. A PR do upstream sai depois do branch do épico, nascido de `upstream/dev`.
+  **Suposição adotada (recomendação, aguarda o operador):** a sugestão do Owl. Criar o branch `local` no fork é decisão do
+  operador e só acontece com o "ok" dele. Dependem: M1.5, U1.1, ritual de fechamento, `docs/operacao.md`.

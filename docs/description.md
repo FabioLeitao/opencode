@@ -78,6 +78,14 @@ Dito com honestidade lá: a PR do zero (#1234) ainda não foi mesclada, e o mant
   `docs/operacao.md` nessa ordem; o `agy` fica como candidato até o operador confirmar, e o `cursor` só com a
   justificativa escrita por tarefa que a regra de uso dele exige.
 
+## Fatos de infra (mensagem do Owl, 2026-11-23; a decisão final é do operador)
+
+- FreeLLMAPI `:3001`: no ar, healthy, 43 h; é o roteador de PRODUÇÃO de todos os harnesses. Usar só como cliente
+  normal. O `fla-pm` vai trocar a imagem depois; combinar a janela com ele. Conferência independente: `freeapi.db`,
+  somente leitura (`requests.platform`, `requests.model_id`).
+- `merge-green` não tem destino especial: mescla a PR na base que ela já tem. Sugestão: a PR do épico mira um branch de
+  integração `local` do fork, e a `dev` do fork fica espelho do `upstream/dev`. A PR do upstream sai do branch do épico.
+
 ## Respostas do cliente
 
 (nenhuma rodada de formulário respondida ainda)
