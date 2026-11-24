@@ -8,11 +8,6 @@ import { tmpdir } from "./fixture/fixture"
 
 // Acceptance tests (QA, black box) for the screen part of the epic "resolved model" (design M1.6): AM1.6-3t, AM1.6-4t,
 // AM1.6-10 and AM1.6-11. The messages come from fixtures, so the screen does not depend on the capture.
-// Tests marked `pending` are the acceptance of task M1.3 (#8) and use `test.failing`: the run breaks when one of them
-// starts to pass, so whoever implements the task has to remove the mark. AM1.6-12t (flag, end to end) is left to
-// AM1.6-12 of packages/server: see the PR description.
-
-const pending = test.failing
 
 const session = {
   id: "ses_resolved_model",
@@ -114,9 +109,9 @@ describe("footer of the assistant message, preparation (not pending)", () => {
   }, 60_000)
 })
 
-describe("footer of the assistant message (pending until M1.3)", () => {
+describe("footer of the assistant message", () => {
   // AM1.6-10 (T1.10, wide) and AM1.6-4t (T1.4): the turn that has the field shows it, the one that does not shows no arrow.
-  pending(
+  test(
     "AM1.6-10 and AM1.6-4t: at 100 columns the footer shows the arrow only for the turn that has the field",
     async () => {
       await using screen = await mount({ width: 100, messages: turns({ resolvedModel: "vendor/real-x" }) })
@@ -131,7 +126,7 @@ describe("footer of the assistant message (pending until M1.3)", () => {
   )
 
   // AM1.6-3t (T1.3): the value the server stores for a dirty id has no ESC left, and the screen prints it as text.
-  pending(
+  test(
     "AM1.6-3t: a stored value that still has [31m shows it as text and no ESC reaches the frame",
     async () => {
       await using screen = await mount({ width: 100, messages: turns({ resolvedModel: "[31mvendor/x" }) })
@@ -144,7 +139,7 @@ describe("footer of the assistant message (pending until M1.3)", () => {
   )
 
   // AM1.6-11 (T1.10, narrow). The wide frame is the control: the arrow is there, then the same screen shrinks to 24 columns.
-  pending(
+  test(
     "AM1.6-11: at 24 columns the footer shows neither the model nor the arrow, as today",
     async () => {
       await using screen = await mount({ width: 100, messages: turns({ resolvedModel: "vendor/real-x" }) })
@@ -164,7 +159,7 @@ describe("footer of the assistant message (pending until M1.3)", () => {
 
   // The live path (the client's own fold of the events), which the design flags as the easy one to forget: the arrow must
   // show without reloading the session. The first step has the field, the second does not.
-  pending(
+  test(
     "AM1.6-10, live: the arrow appears from the step events, with no reload",
     async () => {
       await using screen = await mount({ width: 100, messages: [turns()[0]] })
