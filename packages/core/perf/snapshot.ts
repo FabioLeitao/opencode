@@ -243,6 +243,7 @@ export async function session(snapshots: "on" | "off", ttft: number) {
   const { Agent } = await import("../src/agent")
   const { Bus } = await import("../src/bus")
   const { Database } = await import("../src/database/database")
+  const { Flag } = await import("../src/flag")
   const { Project } = await import("../src/project")
   const { ProjectTable } = await import("../src/project/sql")
   const { Session } = await import("../src/session")
@@ -331,7 +332,13 @@ export async function session(snapshots: "on" | "off", ttft: number) {
           AppNodeBuilder.build(LayerNode.group([Database.node, Bus.node, SessionProjector.node, ToolOutput.node]), [
             Bus.node.replace(Bus.configured({ persist: true })),
           ]),
-          TestLLM.testLayer(),
+          Layer.merge(
+            TestLLM.testLayer(),
+            Layer.mock(Flag.Service, {
+              enabled: () => Effect.succeed(false),
+              resolve: (entries) => Flag.resolve({ entries, channel: "release" }),
+            }),
+          ),
         ),
       ),
       Effect.provide(Logger.layer([])),

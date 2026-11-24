@@ -11,6 +11,7 @@ import type { Agent } from "@opencode/schema/agent"
 import { Cause, Clock, Data, Deferred, Effect, Exit, Fiber, Option, Stream } from "effect"
 import { SessionError } from "@opencode/schema/session-error"
 import { Bus } from "../../bus.js"
+import { Flag } from "../../flag.js"
 import { Permission } from "../../permission.js"
 import { Snapshot } from "../../snapshot.js"
 import { Tool } from "../../tool.js"
@@ -70,6 +71,7 @@ const RESULT_MISSING = { type: "tool.result-missing", message: "Provider did not
 /** Captures Location-scoped dependencies without introducing another service or execution loop. */
 export const make = Effect.gen(function* () {
   const bus = yield* Bus.Service
+  const flag = yield* Flag.Service
   const llm = yield* LLMClient.Service
   const snapshots = yield* Snapshot.Service
   const toolOutput = yield* ToolOutput.Service
@@ -301,7 +303,12 @@ export const make = Effect.gen(function* () {
           const usage = record.finish ? SessionUsage.record(record.finish.usage, input.model.cost) : undefined
           if (usage) yield* Effect.annotateCurrentSpan("opencode.usage.cost_usd", usage.cost)
           if (record.failure) yield* publisher.publishStepFailure({ ...usage, snapshot, files })
-          if (record.finish && usage && !record.failure)
+          if (record.finish && usage && !record.failure) {
+            const flagEnabled = yield* flag.enabled("resolved_model")
+            const responseModel = record.finish.responseModel
+            const requestedModel = input.model.model.id
+            const resolvedModel =
+              flagEnabled && responseModel !== undefined && responseModel !== requestedModel ? responseModel : undefined
             yield* bus.publish(SessionEvent.Step.Ended, {
               sessionID: input.sessionID,
               assistantMessageID: yield* publisher.startAssistant(),
@@ -311,7 +318,9 @@ export const make = Effect.gen(function* () {
               ...usage,
               snapshot,
               files,
+              ...(resolvedModel !== undefined ? { resolvedModel } : {}),
             })
+          }
         }
 
         if (llmError && retry?.retry && tools.declines.length === 0 && !tools.interrupted)

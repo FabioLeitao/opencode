@@ -78,6 +78,7 @@ export interface StepRecord {
     readonly rawFinish?: string
     readonly native?: SessionMessage.Native
     readonly usage: Extract<LLMEvent, { type: "step-finish" }>["usage"]
+    readonly responseModel?: string
   }
   readonly needsContinuation: boolean
 }
@@ -554,6 +555,7 @@ export const createLLMEventPublisher = (bus: Pick<Bus.Interface, "publish">, inp
           rawFinish: event.reason.raw,
           native: native(event.providerMetadata),
           usage: event.usage,
+          responseModel: event.responseModel,
         }
         if (event.reason.normalized === "content-filter") {
           providerFailed = true
