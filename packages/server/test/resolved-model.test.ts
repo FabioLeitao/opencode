@@ -8,10 +8,6 @@ import { ServerFetch } from "../src/fetch"
 
 // Acceptance tests (QA, black box) for the epic "resolved model" (design M1.6, AM1.6-1 to AM1.6-9, AM1.6-12 to AM1.6-14).
 // The server runs in this process behind its public API; the provider is a fake OpenAI-compatible router on port 0.
-// Tests marked `pending` are the acceptance of tasks M1.1 and M1.2 (#6, #7) and use `test.failing`: the run breaks when
-// one of them starts to pass, so whoever implements the task has to remove the mark.
-
-const pending = test.failing
 
 // What the fake router puts in the `model` field of every chunk of one response.
 const OMIT = Symbol("omit")
@@ -107,7 +103,7 @@ const withScenario = async <A>(scenario: Scenario, use: (world: World) => Promis
               app: { version: "test" },
               database: { path: path.join(dir, "opencode.db") },
               // Its own global config directory, so the developer's global config cannot leak in.
-              config: { directory: dir, project: false, content: providerConfig(router.url, scenario.config) },
+              config: { directory: dir, project: false, content: providerConfig(router.url, scenario.config ?? { experimental: { resolved_model: true } }) },
               models: { fetch: false },
               fs: { filewatcher: false },
             })
@@ -247,9 +243,9 @@ describe("preparation (not pending: it must pass before the tasks exist)", () =>
   }, 60_000)
 })
 
-describe("backend acceptance (pending until M1.1 and M1.2)", () => {
+describe("backend acceptance", () => {
   // AM1.6-1 (T1.1)
-  pending(
+  test(
     "AM1.6-1: a router that reports another model leaves it on the assistant message of the export",
     async () => {
       await withScenario({ cases: { real: "vendor/real-x" } }, async (w) => {
@@ -262,7 +258,7 @@ describe("backend acceptance (pending until M1.1 and M1.2)", () => {
   )
 
   // AM1.6-2 (T1.2). The second step is the control: without it, "no key" would also pass with no feature at all.
-  pending(
+  test(
     "AM1.6-2: a router that reports the requested model leaves no resolvedModel key",
     async () => {
       await withScenario({ cases: { same: "auto", real: "vendor/real-x" } }, async (w) => {
@@ -276,7 +272,7 @@ describe("backend acceptance (pending until M1.1 and M1.2)", () => {
   )
 
   // AM1.6-3 (T1.3): the ESC goes, the rest of the sequence stays as inert text (plan T1.3, adjusted).
-  pending(
+  test(
     "AM1.6-3: control characters, bidi and zero-width marks are stripped before the value is stored",
     async () => {
       await withScenario({ cases: { dirty: `${ESC}[31mvendor/x${BIDI_OVERRIDE}${ZERO_WIDTH}` } }, async (w) => {
@@ -288,7 +284,7 @@ describe("backend acceptance (pending until M1.1 and M1.2)", () => {
   )
 
   // AM1.6-4 (T1.4): sanitize before comparing with the requested model.
-  pending(
+  test(
     "AM1.6-4: auto plus a zero-width mark equals the requested model once sanitized, so it is omitted",
     async () => {
       await withScenario({ cases: { masked: `auto${ZERO_WIDTH}`, real: "vendor/real-x" } }, async (w) => {
@@ -301,7 +297,7 @@ describe("backend acceptance (pending until M1.1 and M1.2)", () => {
   )
 
   // AM1.6-5 (T1.5): four alignments put byte 256 in the middle of a character; the last value is exactly 256 bytes.
-  pending(
+  test(
     "AM1.6-5: a huge value is cut at 256 UTF-8 bytes without splitting a character",
     async () => {
       const exact = `${"a".repeat(256 - encoded("é😀"))}é😀`
@@ -317,7 +313,7 @@ describe("backend acceptance (pending until M1.1 and M1.2)", () => {
           expect(text).not.toContain("\ufffd")
           expect(sent.startsWith(text)).toBe(true)
           // Nothing is cut that did not have to be: the next character would not have fit.
-          expect(encoded(text) + encoded([...sent.slice(text.length)][0] ?? "")).toBeGreaterThan(256)
+          if (text !== sent) expect(encoded(text) + encoded([...sent.slice(text.length)][0] ?? "")).toBeGreaterThan(256)
         })
         expect(resolved(messages[4])).toBe(exact)
       })
@@ -326,7 +322,7 @@ describe("backend acceptance (pending until M1.1 and M1.2)", () => {
   )
 
   // AM1.6-6 (T1.6). The last step is the control that the feature works at all; the earlier ones must not break the stream.
-  pending(
+  test(
     "AM1.6-6: a router with no model, an empty one or a non-string one does not hurt the stream",
     async () => {
       const cases: Record<string, Reported> = {
@@ -353,7 +349,7 @@ describe("backend acceptance (pending until M1.1 and M1.2)", () => {
   )
 
   // AM1.6-7 (T1.7): cost and tokens follow the requested model, whatever the router reports.
-  pending(
+  test(
     "AM1.6-7: cost and tokens of a step do not change with the reported model",
     async () => {
       await withScenario({ cases: { same: "auto", real: "vendor/real-x" } }, async (w) => {
@@ -368,7 +364,7 @@ describe("backend acceptance (pending until M1.1 and M1.2)", () => {
   )
 
   // AM1.6-8 (T1.8): the response header must not reach the export or the durable event.
-  pending(
+  test(
     "AM1.6-8: a response header of the router appears neither in the export nor in the step event",
     async () => {
       await withScenario({ cases: { real: "vendor/real-x" } }, async (w) => {
@@ -390,7 +386,7 @@ describe("backend acceptance (pending until M1.1 and M1.2)", () => {
   )
 
   // AM1.6-12 (flag, config form). The default server is the control that the field exists when the flag is on.
-  pending(
+  test(
     "AM1.6-12: experimental.resolved_model: false keeps the field out of the export",
     async () => {
       const cases = { real: "vendor/real-x" }
@@ -408,7 +404,7 @@ describe("backend acceptance (pending until M1.1 and M1.2)", () => {
   )
 
   // AM1.6-13 (T1.11)
-  pending(
+  test(
     "AM1.6-13: in a session of two steps only the step that differs has the field, also with sanitize",
     async () => {
       await withScenario({ cases: { real: "vendor/real-x", same: "auto" } }, async (w) => {
@@ -426,7 +422,7 @@ describe("backend acceptance (pending until M1.1 and M1.2)", () => {
   // AM1.6-14 (T1.12). No public API rebuilds the projection, so this checks the two things a client can see: the durable
   // event carries the value the message has, and a second server reading the same database shows the same message.
   // The rebuild itself is DM1.6-21 (packages/core).
-  pending(
+  test(
     "AM1.6-14: the durable event, the live message and a second server over the same database agree",
     async () => {
       await withScenario({ cases: { real: "vendor/real-x" } }, async (w) => {
