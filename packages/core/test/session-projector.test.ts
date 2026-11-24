@@ -914,6 +914,44 @@ describe("SessionProjector", () => {
     }).pipe(Effect.provide(partRows)),
   )
 
+  it.effect("DM1.6-21 projects resolvedModel from the ended step and DM1.6-22 clears it when the step restarts", () =>
+    Effect.gen(function* () {
+      const db = yield* seedSession()
+      const id = SessionMessage.ID.make("msg_resolved")
+      yield* db.insert(SessionMessageTable).values([assistantRow(id, 0)]).run().pipe(Effect.orDie)
+      const service = yield* Bus.Service
+      const read = Effect.gen(function* () {
+        const row = yield* db
+          .select()
+          .from(SessionMessageTable)
+          .where(eq(SessionMessageTable.id, id))
+          .get()
+          .pipe(Effect.orDie)
+        return Schema.decodeUnknownSync(SessionMessage.Info)({ ...row!.data, id: row!.id, type: row!.type })
+      })
+
+      expect(yield* read).not.toHaveProperty("resolvedModel")
+      yield* service.publish(SessionEvent.Step.Ended, {
+        sessionID,
+        assistantMessageID: id,
+        finish: "stop",
+        cost: Money.USD.make(0),
+        tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        resolvedModel: "vendor/real-x",
+      })
+      expect(yield* read).toMatchObject({ type: "assistant", resolvedModel: "vendor/real-x" })
+
+      yield* service.publish(SessionEvent.Step.Started, {
+        sessionID,
+        assistantMessageID: id,
+        agent: build,
+        model,
+        started: 0,
+      })
+      expect(yield* read).not.toHaveProperty("resolvedModel")
+    }),
+  )
+
   it.effect("projects ended and failed step terminal state", () =>
     Effect.gen(function* () {
       const db = yield* seedSession()
