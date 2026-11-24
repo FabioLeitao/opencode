@@ -7,6 +7,7 @@ import { Bus } from "@opencode/core/bus"
 import { Database } from "@opencode/core/database/database"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { EventTable } from "@opencode/core/event/sql"
+import { Flag } from "@opencode/core/flag"
 import { Project } from "@opencode/core/project"
 import { ProjectTable } from "@opencode/core/project/sql"
 import { AbsolutePath, RelativePath } from "@opencode/core/schema"
@@ -23,16 +24,22 @@ import { Permission } from "@opencode/core/permission"
 import { ToolOutput } from "@opencode/core/tool-output"
 import { Money } from "@opencode/schema/money"
 import { LayerNode } from "@opencode/util/effect/layer-node"
-import { asc, eq } from "drizzle-orm"
+import { and, asc, eq } from "drizzle-orm"
 import { Cause, Deferred, Effect, Exit, Fiber, Layer } from "effect"
 import { testEffect } from "./lib/effect"
+
+const flagLayer = (on: boolean) =>
+  Layer.mock(Flag.Service, {
+    enabled: (key) => Effect.succeed(on && key === "resolved_model"),
+    resolve: (entries) => Flag.resolve({ entries, channel: "release" }),
+  })
 
 const it = testEffect(
   Layer.merge(
     AppNodeBuilder.build(LayerNode.group([Database.node, Bus.node, SessionProjector.node, ToolOutput.node]), [
       Bus.node.replace(Bus.configured({ persist: true })),
     ]),
-    TestLLM.testLayer(),
+    Layer.merge(TestLLM.testLayer(), flagLayer(true)),
   ),
 )
 
@@ -431,5 +438,119 @@ it.live("leaves an interrupted step as a crash would while the server hands its 
         { type: "tool", id: "call-stuck", state: { status: "running" } },
       ],
     })
+  }),
+)
+// Runs one text-only step and returns the data of its durable `session.step.ended` event.
+const stepEndedData = (input: { readonly responseModel?: string; readonly flagOn?: boolean }) =>
+  Effect.gen(function* () {
+    const db = (yield* Database.Service).db
+    const llm = yield* TestLLM.Test
+    const sessionID = Session.ID.create()
+    const assistantMessageID = SessionMessage.ID.create()
+    const steps = yield* SessionStep.make.pipe(
+      Effect.provide(
+        Layer.mock(Snapshot.Service)({
+          capture: () => Effect.succeed(undefined),
+          files: () => Effect.succeed([]),
+        }),
+      ),
+      Effect.provide(flagLayer(input.flagOn !== false)),
+    )
+    yield* db
+      .insert(ProjectTable)
+      .values({ id: Project.ID.global, worktree: AbsolutePath.make("/project"), sandboxes: [] })
+      .onConflictDoNothing()
+      .run()
+    yield* db
+      .insert(SessionTable)
+      .values({ id: sessionID, project_id: Project.ID.global, slug: "step", directory: "/project", version: "test" })
+      .run()
+    const model = SessionRunnerModel.resolved(
+      LanguageModel.make({ id: "test-model", provider: "test", route: OpenAIChat.route }),
+      {
+        capabilities: { tools: true, input: ["text"], output: ["text"] },
+        limit: { context: 100_000, output: 1_000 },
+        cost: [
+          {
+            input: Money.USDPerMillionTokens.make(1),
+            output: Money.USDPerMillionTokens.make(2),
+            cache: { read: Money.USDPerMillionTokens.zero, write: Money.USDPerMillionTokens.zero },
+          },
+        ],
+      },
+    )
+    const reason = { normalized: "stop" } as const
+    yield* llm.push([
+      LLMEvent.stepStart({ index: 0 }),
+      LLMEvent.stepFinish({
+        index: 0,
+        reason,
+        usage: { inputTokens: 10, outputTokens: 4, nonCachedInputTokens: 10 },
+        responseModel: input.responseModel,
+      }),
+      LLMEvent.finish({ reason }),
+    ])
+    yield* steps
+      .attempt({
+        isLocationClosed: () => false,
+        sessionID,
+        assistantMessageID,
+        agent: Agent.defaultID,
+        model,
+        prepared: {
+          retry: () => Effect.void,
+          request: ai.request({ model: model.model, prompt: "Hello" }),
+          options: {},
+          executeTool: () => Effect.die("no tools"),
+        },
+        retry: () => Effect.succeed({ retry: false }),
+        recoverContinuation: true,
+        recoverOverflow: Effect.succeed(false),
+      })
+    const [ended] = yield* db
+      .select()
+      .from(EventTable)
+      .where(and(eq(EventTable.aggregate_id, sessionID), eq(EventTable.type, "session.step.ended.1")))
+      .all()
+    if (!ended) return yield* Effect.die("no session.step.ended event")
+    return ended.data
+  })
+
+it.effect("DM1.6-16 publishes the model the provider reported when it differs from the requested one", () =>
+  Effect.gen(function* () {
+    const data = yield* stepEndedData({ responseModel: "vendor/real-x" })
+    expect(data.resolvedModel).toBe("vendor/real-x")
+  }),
+)
+
+it.effect("DM1.6-17 leaves the key out when the reported model equals the requested wire id", () =>
+  Effect.gen(function* () {
+    const data = yield* stepEndedData({ responseModel: "test-model" })
+    expect("resolvedModel" in data).toBe(false)
+  }),
+)
+
+it.effect("DM1.6-18 keeps cost and tokens when the reported model differs", () =>
+  Effect.gen(function* () {
+    const plain = yield* stepEndedData({})
+    const routed = yield* stepEndedData({ responseModel: "vendor/real-x" })
+    expect(routed.cost).toEqual(plain.cost)
+    expect(routed.tokens).toEqual(plain.tokens)
+  }),
+)
+
+it.effect("DM1.6-19 adds at most resolvedModel to the event keys and no header-like key", () =>
+  Effect.gen(function* () {
+    const plain = yield* stepEndedData({})
+    const routed = yield* stepEndedData({ responseModel: "vendor/real-x" })
+    expect(Object.keys(routed).toSorted()).toEqual([...Object.keys(plain), "resolvedModel"].toSorted())
+    expect(Object.keys(routed).filter((key) => /header/i.test(key))).toEqual([])
+  }),
+)
+
+it.effect("DM1.6-20 publishes nothing when the resolved_model flag is off", () =>
+  Effect.gen(function* () {
+    const data = yield* stepEndedData({ responseModel: "vendor/real-x", flagOn: false })
+    expect("resolvedModel" in data).toBe(false)
   }),
 )

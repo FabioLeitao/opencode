@@ -438,6 +438,31 @@ it.effect("closes the open AI SDK reasoning part when the next one starts", () =
   }),
 )
 
+it.effect("DM1.6-15 puts the model the AI SDK reports on step-finish and not on finish", () =>
+  Effect.gen(function* () {
+    const aisdk = yield* AISDK.Service
+    yield* aisdk.hook.sdk((event) => {
+      event.sdk = {
+        languageModel: () =>
+          streamModel([
+            { type: "response-metadata", modelId: "vendor/real-x" },
+            { type: "finish", finishReason: { unified: "stop", raw: "stop" }, usage },
+          ]),
+      }
+    })
+
+    const resolved = yield* aisdk.model(model("@ai-sdk/gateway"))
+    const response = yield* LLMClient.generate(ai.request({ model: resolved, prompt: "Hello" })).pipe(
+      Effect.provide(client),
+    )
+
+    expect(response.events.find((event) => event.type === "step-finish")).toMatchObject({
+      responseModel: "vendor/real-x",
+    })
+    expect(response.events.find((event) => event.type === "finish")).not.toHaveProperty("responseModel")
+  }),
+)
+
 it.effect("normalizes repeated, reopened, and overlapping AI SDK fragment boundaries", () =>
   Effect.gen(function* () {
     const aisdk = yield* AISDK.Service
