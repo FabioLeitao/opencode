@@ -14,6 +14,10 @@ Dev externo: opencode (TUI no herdr, nunca headless, modelo Auto do FreeLLMAPI p
 - **Issues e PRs**: só no fork. Todo `gh` de escrita leva `--repo FabioLeitao/opencode`, mesmo com o padrão já definido.
 - **Bloqueios contra PR ou push acidental no upstream** (configuração local do clone, feita em 2026-11-23, a pedido do operador): `gh repo set-default FabioLeitao/opencode` (grava `remote.origin.gh-resolved = base`), de modo que o `gh` sem `--repo` cai no fork; e `git remote set-url --push upstream DISABLED_no_push_to_upstream`, de modo que o `git push` para o remoto `upstream` falha (o fetch continua funcionando). Esses bloqueios não impedem um `gh ... --repo anomalyco/opencode` explícito: esse caso só se evita pela trava de "nada no upstream sem o vai". Para a PR do upstream, quando chegar a hora, a branch do épico sobe pelo `origin` e o `gh pr create --repo anomalyco/opencode --head FabioLeitao:<branch>` é feito só com o "vai". Para desfazer: `git remote set-url --push upstream https://github.com/anomalyco/opencode.git` e `gh repo set-default --unset`.
 
+## Regra inegociável: NUNCA worktree, NUNCA cópia ou clone do repo (ordem do operador, repetida; 24/nov/2026)
+
+Vale para o PM, todo subagente, todo revisor e todo dev externo, de qualquer harness. Proibido `git worktree add`, o `--worktree` e o `-w` de qualquer harness, e copiar ou clonar o repositório para outra pasta (`/tmp`, `~/.cache`, qualquer outra). Todo trabalho vai em BRANCH do clone canônico (`git switch -c`); clone sujo se resolve com commit num branch. O `/tmp` é tmpfs (RAM): temporário só pequeno, por `mktemp`, apagado por quem o criou (`trap`). Antes de apagar um temporário, guardar o trabalho no clone (commit e push) e conferir. **Esta linha entra em todo brief de dev externo e em toda chamada a subagente.** Conferência do PM depois de cada passo: `git worktree list` (só o clone canônico) e o `/tmp`. Fonte: `~/.claude/CLAUDE.md` e `~/AGENTS.md`.
+
 ## Travas do upstream (`anomalyco/opencode`)
 
 - NADA no upstream (issue, comentário, PR, reação) sem o "vai" do operador.
