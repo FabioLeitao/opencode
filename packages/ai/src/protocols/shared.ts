@@ -549,4 +549,29 @@ function compressBody(text: string, encoding: RequestEncoding | undefined) {
   }
 }
 
+/**
+ * A provider-reported model id, made safe to store and print: printable only, trimmed, at most 256 UTF-8 bytes.
+ * (1) not a string -> undefined. (2) delete every char matching /[^\p{L}\p{M}\p{N}\p{P}\p{S} ]/gu (everything that is
+ * NOT a letter, mark, number, punctuation, symbol or ASCII space). (3) trim leading spaces. (4) cut to at most
+ * 256 UTF-8 bytes BY CODE POINT (summing new TextEncoder().encode(ch).length), never splitting a character.
+ * (5) trim trailing spaces. (6) empty -> undefined.
+ */
+export const reportedModel = (value: unknown): string | undefined => {
+  if (typeof value !== "string") return undefined
+  // Remove control chars, format chars, lone surrogates, private use, unassigned, line/para separators, non-ASCII spaces
+  const printable = value.replace(/[^\p{L}\p{M}\p{N}\p{P}\p{S} ]/gu, "")
+  const trimmed = printable.trimStart()
+  const encoder = new TextEncoder()
+  let byteLength = 0
+  let result = ""
+  for (const ch of trimmed) {
+    const bytes = encoder.encode(ch).length
+    if (byteLength + bytes > 256) break
+    byteLength += bytes
+    result += ch
+  }
+  const final = result.trimEnd()
+  return final.length > 0 ? final : undefined
+}
+
 export * as ProviderShared from "./shared.js"

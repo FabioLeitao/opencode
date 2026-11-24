@@ -102,6 +102,7 @@ export const finish = (
     readonly reason: FinishReasonDetails
     readonly usage?: Usage
     readonly providerMetadata?: ProviderMetadata
+    readonly responseModel?: string
   },
 ): State => {
   const stepped = closeOpenBlocks(stepStart(state, events), events)
@@ -110,6 +111,7 @@ export const finish = (
       index: 0,
       reason: input.reason,
       usage: input.usage,
+      responseModel: input.responseModel,
       providerMetadata: input.providerMetadata,
     }),
     LLMEvent.finish(input),

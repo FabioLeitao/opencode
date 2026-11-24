@@ -379,6 +379,8 @@ export interface ParserState {
   readonly latestToolIndex?: number
   readonly nextToolIndex: number
   readonly requireFinishReason: boolean
+  /** Sanitized provider-reported model id from stream chunks. */
+  readonly responseModel?: string
 }
 
 // =============================================================================
@@ -1157,6 +1159,9 @@ const step = (state: ParserState, event: OpenAIChatEvent) =>
       : state.finishReason
     const delta = choice?.delta
     const toolDeltas = delta?.tool_calls ?? []
+
+    // The model the provider reports is untrusted text: sanitize it here, at the boundary that receives it.
+    const responseModel = ProviderShared.reportedModel("model" in event ? event.model : undefined) ?? state.responseModel
     let tools = state.tools
     let pendingTools = state.pendingTools
     let customCalls = state.customCalls
@@ -1314,6 +1319,7 @@ const step = (state: ParserState, event: OpenAIChatEvent) =>
         latestToolIndex,
         nextToolIndex,
         requireFinishReason: state.requireFinishReason,
+        responseModel,
       },
       events,
     ] as const
@@ -1372,7 +1378,7 @@ export const finishEvents = Effect.fnUntraced(function* (state: ParserState) {
   const ended = Lifecycle.reasoningEnd(started, events, "reasoning-0", metadata)
   const lifecycle = toolCallEvents.length ? Lifecycle.stepStart(ended, events) : ended
   events.push(...toolCallEvents)
-  Lifecycle.finish(lifecycle, events, { reason, usage: state.usage })
+  Lifecycle.finish(lifecycle, events, { reason, usage: state.usage, responseModel: state.responseModel })
   return events
 })
 
@@ -1408,6 +1414,7 @@ export const protocol = Protocol.make({
       reasoningEmitted: false,
       nextToolIndex: 0,
       requireFinishReason: request.model.compatibility?.requireFinishReason ?? true,
+      responseModel: undefined,
     }),
     step: (state: ParserState, event) => (event === DONE ? Effect.succeed([state, []] as const) : step(state, event)),
     terminal: (event) => event === DONE,

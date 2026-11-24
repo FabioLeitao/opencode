@@ -281,6 +281,8 @@ export const StepFinish = Schema.Struct({
   index: Schema.Number,
   reason: FinishReasonDetails,
   usage: Schema.optional(Usage),
+  /** The model id the provider reported for this response, sanitized by ProviderShared.reportedModel. May equal the requested id. */
+  responseModel: Schema.optional(Schema.String),
   providerMetadata: Schema.optional(ProviderMetadata),
 }).annotate({ identifier: "LLM.Event.StepFinish" })
 export type StepFinish = Schema.Schema.Type<typeof StepFinish>
