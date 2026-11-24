@@ -21,8 +21,8 @@ consequências e quem decidiu. Mantido pelo arquiteto-senior, no branch `gestao`
 - **Data:** 2026-11-23 · **Status:** aceita · **Decidiu:** arquiteto-senior
 - **Contexto:** o pedido tem dois ids: o `ref.id` do catálogo e o `LanguageModel.id` que vai no `model` do corpo da
   requisição. Os dois diferem quando o catálogo tem alias.
-- **Decisão:** comparar o valor já sanitizado, por igualdade exata, com o `LanguageModel.id` (`input.model.model.id` em
-  `step.ts`).
+- **Decisão:** comparar o valor já sanitizado (ADR-004), por igualdade exata, com o `LanguageModel.id`
+  (`input.model.model.id` em `step.ts`).
 - **Consequências:** um provider que devolve o id que recebeu não gera seta. Um provider que devolve um id de snapshot
   (`gpt-4o` → `gpt-4o-2024-08-06`) gera. Isso fica como pergunta ao mantenedor, sem heurística de prefixo.
 
@@ -38,13 +38,18 @@ consequências e quem decidiu. Mantido pelo arquiteto-senior, no branch `gestao`
 - **Consequências:** em release a flag fica desligada e o campo não é gravado. Graduar é apagar a flag. O mantenedor
   pode pedir outro lugar ou a chave `experimental` (promessa 8 da `#60309`).
 
-## ADR-004: regras de sanitização do model informado pelo provider
+## ADR-004: sanitização do model informado pelo provider, no `packages/ai`
 
-- **Data:** 2026-11-23 · **Status:** aceita · **Decidiu:** arquiteto-senior
+- **Data:** 2026-11-23 · **Status:** aceita (revisada no mesmo dia: a sanitização saiu do `core` e foi para o
+  `packages/ai`) · **Decidiu:** arquiteto-senior
 - **Contexto:** o valor vem do outro lado da conexão e acaba no terminal. A promessa 2 da `#60309` fixa: sem controle nem
-  formatação, no máximo 256 bytes sem partir caractere, e sanitizar antes de comparar.
-- **Decisão:** remover os pontos de código de `\p{Cc}`, `\p{Cf}`, `\p{Cs}`, `\p{Zl}` e `\p{Zp}`; fazer trim; cortar em
-  256 bytes UTF-8 por ponto de código; vazio ou igual ao pedido vira ausente. Só os caracteres saem: `ESC[31m` vira
-  `[31m`.
-- **Consequências:** é a mesma regra do precedente `Twigpine/zero#1234`. O `session import` continua aceitando o valor
-  sem sanitizar, e isso fica fora do escopo.
+  formatação, no máximo 256 bytes sem partir caractere, e sanitizar antes de comparar. O `AGENTS.md` pede validar uma
+  vez, na fronteira dona do valor.
+- **Decisão:** `ProviderShared.reportedModel(value: unknown)` em `packages/ai/src/protocols/shared.ts`, chamado pelo
+  protocolo OpenAI Chat a cada chunk e pelo `aisdk.ts` no `response-metadata`. A regra é a do `SanitizeResolvedModel` do
+  `Twigpine/zero#1234` (lida no diff, só leitura): mantém só `\p{L}`, `\p{M}`, `\p{N}`, `\p{P}`, `\p{S}` e o espaço
+  ASCII; tira espaços do começo; corta em 256 bytes UTF-8 por ponto de código; tira espaços do fim; vazio vira ausente.
+  Vale o último valor que sobrevive à sanitização. O `core` só compara com o id do fio.
+- **Consequências:** o `LLMEvent` nunca carrega controle, nem para quem usa o `packages/ai` fora do `core`. Só os
+  caracteres saem: `ESC[31m` vira `[31m` (suposição a confirmar com o operador, porque o T1.3 do plano diz "tudo
+  removido"). O `session import` continua aceitando o valor sem sanitizar, e isso fica fora do escopo.
