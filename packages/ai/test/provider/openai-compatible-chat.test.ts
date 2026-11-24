@@ -817,3 +817,131 @@ describe("OpenAI-compatible Chat route", () => {
     }),
   )
 })
+
+describe("responseModel on step-finish (DM1.6-10 to DM1.6-14)", () => {
+  const baseRequest = ai.request({
+    model,
+    prompt: "Say hello.",
+  })
+
+  // DM1.6-10: model on all chunks and usage in the last
+  it.effect("DM1.6-10: stream with model on all chunks -> step-finish has responseModel", () =>
+    Effect.gen(function* () {
+      const response = yield* LLMClient.generate(baseRequest).pipe(
+        Effect.provide(
+          fixedResponse(
+            sseEvents(
+              { id: "chatcmpl_1", choices: [{ delta: { role: "assistant", content: "Hello" }, finish_reason: null }], model: "vendor/real-x" },
+              { id: "chatcmpl_1", choices: [{ delta: { content: "!" }, finish_reason: null }], model: "vendor/real-x" },
+              { id: "chatcmpl_1", choices: [{ delta: {}, finish_reason: "stop" }], model: "vendor/real-x", usage: { prompt_tokens: 5, completion_tokens: 2, total_tokens: 7 } },
+            ),
+          ),
+        ),
+      )
+
+      const stepFinish = response.events.find((e) => e.type === "step-finish")
+      expect(stepFinish).toBeDefined()
+      expect((stepFinish as any).responseModel).toBe("vendor/real-x")
+
+      const finish = response.events.find((e) => e.type === "finish")
+      expect(finish).toBeDefined()
+      expect((finish as any).responseModel).toBeUndefined()
+    }),
+  )
+
+  // DM1.6-11: stream without model
+  it.effect("DM1.6-11: stream without model -> step-finish has no responseModel", () =>
+    Effect.gen(function* () {
+      const response = yield* LLMClient.generate(baseRequest).pipe(
+        Effect.provide(
+          fixedResponse(
+            sseEvents(
+              deltaChunk({ role: "assistant", content: "Hello" }),
+              deltaChunk({ content: "!" }),
+              deltaChunk({}, "stop"),
+              usageChunk({ prompt_tokens: 5, completion_tokens: 2, total_tokens: 7 }),
+            ),
+          ),
+        ),
+      )
+
+      const stepFinish = response.events.find((e) => e.type === "step-finish")
+      expect(stepFinish).toBeDefined()
+      expect((stepFinish as any).responseModel).toBeUndefined()
+
+      const finish = response.events.find((e) => e.type === "finish")
+      expect(finish).toBeDefined()
+      expect((finish as any).responseModel).toBeUndefined()
+
+      // Text events and usage are the same as today
+      expect(response.text).toBe("Hello!")
+      expect(response.usage).toMatchObject({ inputTokens: 5, outputTokens: 2, totalTokens: 7 })
+    }),
+  )
+
+  // DM1.6-12: chunk with non-string model
+  it.effect("DM1.6-12: chunk with non-string model -> stream does not fail, responseModel keeps last good value or is absent", () =>
+    Effect.gen(function* () {
+      // Non-string model (number) in the last chunk
+      const response = yield* LLMClient.generate(baseRequest).pipe(
+        Effect.provide(
+          fixedResponse(
+            sseEvents(
+              { id: "chatcmpl_1", choices: [{ delta: { role: "assistant", content: "Hello" }, finish_reason: null }], model: "vendor/good" },
+              { id: "chatcmpl_1", choices: [{ delta: { content: "!" }, finish_reason: null }], model: 42 },
+              { id: "chatcmpl_1", choices: [{ delta: {}, finish_reason: "stop" }], usage: { prompt_tokens: 5, completion_tokens: 2, total_tokens: 7 } },
+            ),
+          ),
+        ),
+      )
+
+      const stepFinish = response.events.find((e) => e.type === "step-finish")
+      expect(stepFinish).toBeDefined()
+      // Keeps the last good value
+      expect((stepFinish as any).responseModel).toBe("vendor/good")
+    }),
+  )
+
+  // DM1.6-13: model changes between chunks
+  it.effect("DM1.6-13: model 'a' in first chunk and 'b' in usage chunk -> responseModel is 'b'", () =>
+    Effect.gen(function* () {
+      const response = yield* LLMClient.generate(baseRequest).pipe(
+        Effect.provide(
+          fixedResponse(
+            sseEvents(
+              { id: "chatcmpl_1", choices: [{ delta: { role: "assistant", content: "Hello" }, finish_reason: null }], model: "vendor/a" },
+              { id: "chatcmpl_1", choices: [{ delta: { content: "!" }, finish_reason: null }], model: "vendor/a" },
+              { id: "chatcmpl_1", choices: [{ delta: {}, finish_reason: "stop" }], model: "vendor/b", usage: { prompt_tokens: 5, completion_tokens: 2, total_tokens: 7 } },
+            ),
+          ),
+        ),
+      )
+
+      const stepFinish = response.events.find((e) => e.type === "step-finish")
+      expect(stepFinish).toBeDefined()
+      expect((stepFinish as any).responseModel).toBe("vendor/b")
+    }),
+  )
+
+  // DM1.6-14: good value then garbage in last chunk
+  it.effect("DM1.6-14: 'a' first, then garbage in last chunk -> responseModel stays 'a'", () =>
+    Effect.gen(function* () {
+      const response = yield* LLMClient.generate(baseRequest).pipe(
+        Effect.provide(
+          fixedResponse(
+            sseEvents(
+              { id: "chatcmpl_1", choices: [{ delta: { role: "assistant", content: "Hello" }, finish_reason: null }], model: "vendor/a" },
+              { id: "chatcmpl_1", choices: [{ delta: { content: "!" }, finish_reason: null }], model: "vendor/a" },
+              { id: "chatcmpl_1", choices: [{ delta: {}, finish_reason: "stop" }], model: "\u0000", usage: { prompt_tokens: 5, completion_tokens: 2, total_tokens: 7 } },
+            ),
+          ),
+        ),
+      )
+
+      const stepFinish = response.events.find((e) => e.type === "step-finish")
+      expect(stepFinish).toBeDefined()
+      // Garbage chunk does not erase the good earlier value
+      expect((stepFinish as any).responseModel).toBe("vendor/a")
+    }),
+  )
+})
