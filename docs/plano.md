@@ -130,8 +130,9 @@ Tarefa mista: M1.1 a M1.4 compartilham o branch. Não se dividem em PRs separado
 - **T1.1** model real diferente do pedido (`auto` pedido, `nemotron-…` devolvido) → o passo guarda o valor devolvido.
   Cobre R1.
 - **T1.2** model real igual ao pedido → o campo é omitido. Cobre R3.
-- **T1.3** valor com sequência de escape (`ESC[31m`), controle bidirecional (`U+202E`) e largura zero (`U+200B`) → tudo
-  removido antes de guardar e de exibir. Cobre R2.
+- **T1.3** valor com sequência de escape (`ESC[31m`), controle bidirecional (`U+202E`) e largura zero (`U+200B`) → todo
+  caractere de controle e de formatação removido antes de guardar e de exibir. O `ESC` sai e o `[31m` que sobra é texto
+  imprimível e fica, como no precedente do zero (ADR-004 do desenho M1.6, confirmado pelo PM em 2026-11-23). Cobre R2.
 - **T1.4** `auto` + `U+200B` devolvido → depois de sanitizar é igual ao pedido e o campo é omitido (sanitiza antes de
   comparar). Cobre R2, R3.
 - **T1.5** valor gigante (mais de 256 bytes, com caracteres de vários bytes) → no máximo 256 bytes, UTF-8 válido, sem
