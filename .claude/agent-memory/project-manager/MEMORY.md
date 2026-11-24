@@ -1,0 +1,1 @@
+- [Estado do projeto "modelo real do roteador"](project_resolved_model_estado.md) — decisões, travas do upstream, PDFs enviados e próximo passo
