@@ -11,7 +11,8 @@ Dev externo: opencode (TUI no herdr, nunca headless, modelo Auto do FreeLLMAPI p
 
 - **Gerência** (plano, descrição, custos, PDFs, memória do PM): branch `gestao` do fork `FabioLeitao/opencode`. Nunca mescla na `dev`, nunca entra em branch de patch. O `gestao` não tem rastreamento de upstream, e o push é sempre explícito: `git push origin gestao:gestao`.
 - **Código**: um branch de épico por objetivo, nascido de `upstream/dev` (nome com no máximo três palavras, sem barra; o do Objetivo 1 é `resolved-model`). Testes do QA e implementação entram nele em commits ordenados, testes primeiro, e saem num único PR. Nada mescla na `dev` do fork.
-- **Issues e PRs**: só no fork. Todo `gh` de escrita leva `--repo FabioLeitao/opencode`, porque o clone não tem repositório padrão e tem dois remotos.
+- **Issues e PRs**: só no fork. Todo `gh` de escrita leva `--repo FabioLeitao/opencode`, mesmo com o padrão já definido.
+- **Bloqueios contra PR ou push acidental no upstream** (configuração local do clone, feita em 2026-11-23, a pedido do operador): `gh repo set-default FabioLeitao/opencode` (grava `remote.origin.gh-resolved = base`), de modo que o `gh` sem `--repo` cai no fork; e `git remote set-url --push upstream DISABLED_no_push_to_upstream`, de modo que o `git push` para o remoto `upstream` falha (o fetch continua funcionando). Esses bloqueios não impedem um `gh ... --repo anomalyco/opencode` explícito: esse caso só se evita pela trava de "nada no upstream sem o vai". Para a PR do upstream, quando chegar a hora, a branch do épico sobe pelo `origin` e o `gh pr create --repo anomalyco/opencode --head FabioLeitao:<branch>` é feito só com o "vai". Para desfazer: `git remote set-url --push upstream https://github.com/anomalyco/opencode.git` e `gh repo set-default --unset`.
 
 ## Travas do upstream (`anomalyco/opencode`)
 
